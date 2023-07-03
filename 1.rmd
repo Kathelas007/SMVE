@@ -1,0 +1,128 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+b <- 5
+b <- 5L
+```
+
+complex
+```{r}
+2 + 7i
+```
+logicke
+```{r}
+5 > 3
+5 == 7
+5 != 6
+```
+string
+```{r}
+c <- "cvika"
+```
+vektory
+```{r}
+v1 <- c(1, 2, 9, 3, 4)
+v2 <- c(2, 8, 4, 2, 7)
+
+
+length(v1)
+sum(v1)
+cumsum(v1)
+prod(v1)
+
+v1 / v2
+v1 %*% v2
+
+(v3 <- seq(from = 1, to = 20, by = 2))
+(v4 <- rep(c(1, 3, 2), times = 4))
+(v4 <- rep(c(1, 3, 2), times = c(1, 2, 3)))
+```
+
+pole a matice
+```{r}
+A <- matrix(v4, 3, 3, byrow = TRUE)
+```
+datov tabulka
+```{r}
+(studium <- factor(c(1, 0, 0, 1, 1), labels = c("ib", "it")))
+(vek <- c(18, 22, 21, 20, 18))
+(meno <- c("Bob", "Ivo", "Ema", "Lena", "Dan"))
+(studenti <- data.frame(meno, vek, studium))
+```
+pridani sloupce
+```{r}
+studenti$byd <- c("i", "i", "d", "d", "i")
+studenti$body <- c(10, 20, 0, 2, 8)
+```
+studenti it, kteri maji vic jak 10 b.
+```{r}
+it <- subset(studenti, studenti$studium == "it")
+v10 <- subset(it, studenti$body >= 10)
+v10
+```
+ib, mladsi jak 20
+```{r}
+ib_mladsi <- subset(studenti, studenti$studium == "ib" & studenti$vek < 20)
+ib_mladsi
+```
+vyukove data, MASS
+```{r}
+# install.packages("dplyr")
+# install.packages("MASS")
+library(MASS)
+Cars93 <- MASS::Cars93
+# data(Cars93)
+# View(Cars93)
+```
+auto v usa vyrobene
+```{r}
+d <- subset(Cars93, Cars93$Origin == "USA")
+d
+```
+ake znacky vyraba volvo, mazda
+```{r}
+a <- subset(Cars93, Cars93$Manufacturer == 'Audi' | Cars93$Manufacturer == 'Volvo')
+a$Make
+```
+mazdy  scenou pod 15 000
+```{r}
+b <- subset(Cars93, Cars93$Manufacturer == 'Mazda' & Cars93$Price < 15000)
+b
+```
+auta bez airbagou
+```{r}
+c <- subset(Cars93, Cars93$AirBags == FALSE)
+c
+```
+
+basic grafy
+```{r}
+plot(cos, from = -2 * pi, to = pi, xlab = "os x", ylab = "cos x")
+par(mfrow = c(1, 2))
+
+xx <- seq(-2 * pi, 2 * pi, length = 20)
+plot(xx, cos(xx), type = "b")
+plot(xx, cos(xx), type = "p")
+
+par(mfrow = c(1, 1))
+```
+kolacove a sloupcove grafy
+```{r}
+pie(table(studenti$studium))
+pie(table(Cars93$Manufacturer))
+
+barplot(table(studenti$studium))
+barplot(table(Cars93$Manufacturer))
+```
+
+DU - import excel dat
+```{r}
+# install.packages("readxl")
+library("readxl")
+tbl <- read_excel("table.xlsx")
+tbl
+```

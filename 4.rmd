@@ -1,0 +1,100 @@
+---
+title: "Exercise 4"
+output: html_notebook
+---
+
+# Intervaly spolehlivosti
+alpha - sognificant level, 0.05
+
+PR: Vyrobce uvadi, ze toner je potreba vymenit po 2500 zkopirovanych stran. Smer odchylka podle vyrobce je 30 stran. Mame mereni:
+```{r}
+x <- c(2445, 2450, 2453, 2462, 2463, 2463, 2466, 2471, 2474, 2475, 2475,
+       2484, 2485, 2486, 2487, 2490, 2491, 2493, 2499, 2501, 2501, 2503,
+       2504, 2505, 2505, 2506, 2506, 2507, 2509, 2511, 2511, 2513, 2514,
+       2515, 2518, 2523, 2523, 2524, 2525, 2527, 2529, 2530, 2530, 2533,
+       2535, 2536, 2537, 2539, 2560, 2571)
+```
+
+1. interval spolehlivosti pro mi, pokud sigma pozname
+```{r}
+# 95% oboustranny, vzorec
+alpha <- 0.05
+mi <- mean(x)
+sigm <- 30
+n <- length(x)
+
+IS <- mi + c(-1, 1) * (qnorm(1 - alpha / 2)) * sigm / sqrt(n)
+res <- c(lower = IS[1], mean = mi, upper = IS[2])
+res
+```
+```{r}
+# levostranny a pravostranny
+ISl <- c(mi - (qnorm(1 - alpha)) * sigm / sqrt(n), Inf)
+ISr <- c(-Inf, mi + qnorm(1 - alpha) * sigm / sqrt(n))
+```
+2. interval spolehlivosti pro mi, pokud sigma nepozname
+```{r}
+IS <- mi + c(-1, 1) * qt(1 - alpha / 2, n - 1) * sd(x) / sqrt(n)
+ISl <- c(mi - qt(1 - alpha, n - 1) * sd(x) / sqrt(n), Inf)
+ISr <- c(-Inf, mi + qt(1 - alpha, n - 1) * sd(x) / sqrt(n))
+```
+Knihovni funkce
+```{r}
+# stredni hodnota, kdyz sigma nezname
+# default to dela
+t.test(x = x, conf.level = 0.95, alternative = 'two.sided')$conf.int
+t.test(x = x, conf.level = 0.95, alternative = 'less')$conf.int # pravostrany
+t.test(x = x, conf.level = 0.95, alternative = 'greater')$conf.int # levostranny
+
+t.test(x = x, conf.level = 0.95, alternative = 'two.sided')
+```
+Ostatni knihovny
+```{r}
+# install.packages("DescTools")
+library(DescTools)
+MeanCI(x)
+MeanCI(x, conf.level = 0.9, sides = 'left')
+MeanCI(x, conf.level = 0.9, sides = 'right')
+
+```
+```{r}
+# install.packages("Rmisc") # interval spolehlivosti na podmnozina
+library(Rmisc)
+library(readxl)
+CI(x)
+data <- read_xlsx('dataE.xlsx')
+group.CI(data$mprij ~ data$pohlavie, data = data)
+group.CI(mprij ~ vzdelanie + pohlavie, data = data)
+
+```
+Overeni metody, montecarlo simulace
+```{r}
+k <- 0
+for (i in 1:100) {
+  a <- rnorm(30, 0, 1);
+  is <- t.test(a)$conf.int
+  if (0 <= is[1]) { k <- k + 1 };
+  if (0 >= is[2]) { k <- k + 1 }
+}
+k
+```
+Interval spolehlivosti pro sigma oboustrane a jednostranne
+```{r}
+IS <- c((n - 1) * var(x) / qchisq(1 - alpha / 2, df = n - 1), (n - 1) * var(x) / qchisq(alpha / 2, df = n - 1)) # je to ok, nelhal prodejce
+ISl <- c((n - 1) * var(x) / qchisq(1 - alpha, df = n - 1), Inf)
+ISr <- c(0, (n - 1) * var(x) / qchisq(alpha, df = n - 1))
+```
+Odhad binomickeho, odhaduju p
+
+PR: Ze 100 respondentu 15 vyjadrilo ochotu dat se zaockovat akcinou abc. Bodovy odhad 15/100, intervalovy odhad 95% vypocitat.
+```{r}
+prop.test(x=15, n=100)$conf.int
+binom.test(15, 100)$conf.int
+
+
+plot(function (x) dnorm(x, 0, 1))
+plot(function (x) dt(x, df=2), from = -3, to=3, col='red', add=T)
+plot(function (x) dt(x, df=2), from = -3, to=3, col='green', add=T)
+
+```
+

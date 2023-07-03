@@ -1,0 +1,186 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Logisticka regrese
+
+Banka. Podelujte, ze P(Y=1).
+```{r}
+library(readxl)
+banka <- read_excel("banka.xlsx")
+head(banka)
+```
+
+```{r}
+logit1 <- glm(problem~., data=banka, family = "binomial")
+summary(logit1)
+# podle AIC se to muze porovnat ty modely
+```
+```{r}
+b0 <- logit1$coefficients[1]
+b1 <- logit1$coefficients[2]
+
+xx <- seq(0, 1, 0.1)
+yy <- 1 / (1 + exp(b0 + b1 * xx))
+plot(problem~vzdelanie, data = banka)
+lines(xx, yy, col='red')
+```
+Priklad 2 - diabetes
+
+```{r}
+library(mlbench)
+data("PimaIndiansDiabetes2")
+```
+```{r}
+library(Amelia)
+missmap(PimaIndiansDiabetes2) # mapa nan values
+dd <- na.omit(PimaIndiansDiabetes2) # vyhozeni neuplnych dat
+```
+```{r}
+diab <- read.csv("diabetes.csv")
+missmap(diab)
+```
+```{r}
+str(diab)
+```
+
+```{r}
+# nic mode neni videt, musi se to jeste obarvit
+pairs(diab, col=diab$Outcome)
+```
+```{r}
+par(mfrow=c(2, 4))
+for(i in 1:8) { boxplot(diab[, i], main=names(diab)[i]) }
+```
+```{r}
+# par(mfrow=c(2, 4))
+lapply(1:8, function (i) {boxplot(diab[, i]~diab$Outcome, main=names(diab)[i])})
+```
+
+```{r}
+pimamodel <- glm(Outcome~., data = diab, family = "binomial")
+summary(pimamodel)
+```
+Vyhodim, propocitam, kouknu se na AIC. Ted ale se budem soustredit na celkovy model. Vyhodnotime kvalitu predpovedi.
+
+Pravdepodobnosti podle regrese.
+```{r}
+props <- predict(pimamodel, type = 'response')
+props
+```
+
+cut point bude 0.5 pravdepodobnost
+
+```{r}
+pred <- ifelse(props > 0.5, 1, 0)
+pred
+```
+
+```{r}
+table(pred, diab$Outcome)
+```
+
+procento uspesnosti
+```{r}
+mean(pred==diab$Outcome)
+```
+
+hodnoceni kvality pomoci ROC a AUC.
+```{r}
+library(ROCR)
+p <- predict(pimamodel, diab, type = 'response')
+pr <- prediction(p, diab$Outcome)
+```
+
+```{r}
+prf <- performance(pr, 'tpr', 'fpr')
+plot(prf)
+```
+```{r}
+auc <- performance(pr, 'auc')
+auc@y.values
+```
+
+```{r}
+library(ROCit)
+roc <- rocit(score=p, class = diab$Outcome)
+roc
+```
+
+```{r}
+plot(roc)
+```
+
+### shlukova analyza
+objekty do skupin na zaklade jejich podobnosti, kazdy objekt je jen v jednom shluku.
+jak podobne/nepodobne sou objekty chceme vedet, matice vzdalenosti.
+
+vypocitejte matice vzdalenosti pro nasledujici tri objekty
+
+```{r}
+o1 <-c(2, 5)
+o2 <-c(3, 2)
+o3 <-c(5, 4)
+
+# default je Euklidovska
+A <- matrix(c(o1, o2, o3), ncol = 2, nrow = 2, byrow = T)
+
+dist(A) # 2 a 3 sou k sobe nejbliz
+```
+
+```{r}
+# cebysevova
+dist(A, method = 'max')
+```
+
+```{r}
+# binarni
+dist(A, method = 'binary')
+```
+
+```{r}
+library(car)
+library(carData)
+mtcars
+```
+
+```{r}
+d1 <- mtcars[1:20, 1:4]
+d1
+```
+
+```{r}
+dd1 <- dist(d1)
+```
+hierarchicke aglomeraticne shlukovani
+metoda nejvzdalenejsiho souseda
+```{r}
+k1 <- hclust(dd1)
+plot(k1, hang = -1)
+```
+
+```{r}
+k2 <- hclust(dd1, 'ave')
+plot(k2)
+```
+ted mejme tri shluky
+```{r}
+library(sparcl)
+plot(k2)
+rect.hclust(k2, k=3, border = 'red')
+```
+Nehyerarchicka metoda - vim dopredu pocet klastru.
+Je dobry to nejdriv znormovat - standardizace
+```{r}
+data <- USArrests
+data <- scale(data)
+ckms <- kmeans(data, centers = 3)
+ckms
+```
+
+```{r}
+library(factoextra)
+fviz_cluster(ckms, data=data)
+```
+

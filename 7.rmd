@@ -1,0 +1,138 @@
+---
+title: "Test dobre shody"
+output: html_notebook
+---
+
+Overeni shody s danym rozdelenim.
+
+## Diskretni rozdeleni
+
+Pearsonuv test - test dobre shody
+Shoda s diskretnim a spojitym rozdelenim !! (chyby na testech).
+I na jiny testovani to slouzi (nezavislost znaku v kontingencni tabulce).
+
+Zda je kostka OK, nebo falesna. H0: shoda s rovnomernym diskretnim rozdelenim.
+Hodnoty sou 1-6, p = 1/6.
+```{r}
+# patru tam i teoreticke pravdepodobnosti, u rovnomernyho rozdeleni to byt nemusi.
+d1 <- c(122, 61, 98, 115, 79, 125)
+test <- chisq.test(d1)
+test
+```
+p value je velmi mala, < 0.05, zamitam H0, kostka je cinkla.
+
+```{r}
+# ?? nejakej rozdil lehkej, asi nepouzivat
+chisq.test(d1, simulate.p.value = T)
+```
+Priklad s teoretickejma pravdepodobnostma.
+
+Pocas 100 dni sme sledovali pocty roztrhnuti vlakej (Poass) na stroji po generalni oprave.
+Ridi se to Poassonovym rozdelenim, stredni hodnota je 3 (za 1 den 3 roztrzeni). Overte shodu s danym rozdelenim.
+
+```{r}
+data <- c(rep(0, 4), rep(1, 10), rep(2, 26), rep(3, 27), rep(4, 13), rep(5, 10), rep(6, 4), rep(7, 4), rep(8, 2))
+tab <- table(data)
+d1 <- c(4, 10, 26, 27, 13, 10, 4, 4, 2) # pocetnosti empiricke
+```
+
+p0, p1, ... p7, 1- sum(all)
+```{r}
+pp <- dpois(0:7, 3); pp[9] <- 1 - sum(pp) # 8 a vic
+```
+```{r}
+length(d1); length(pp)
+chisq.test(d1, pp)
+chisq.test(d1, p = pp, simulate.p.value = T)
+# p hodnota je > 0.05, nezamitam H0, data se ridi poissonovym rozdelenim.
+```
+S odhadnutou lambdou z namerenych dat zkusime jeste jednou
+```{r}
+l <- mean(data); l
+pp <- dpois(0:7, l)
+pp[9] <- 1 - sum(pp) # 8 a vic
+chisq.test(d1, p = pp, simulate.p.value = T)
+```
+S odhadnutou lambdou to vyslo jinak. Stupne volnosti jiny.
+
+## Spojity rozdeleni
+
+Kolmogorov-Smirgov test dobre shody - shoda se spojitym rozdelenim. Ma vetsi silu. Vyzaduje znalost parametru.
+Shoda s teoretickym spojitym rozdelenim. Udela se empiricka distribucni funkce. Pak supremelne rozdily.
+
+U testovani meraciho pristroje sme 30x opakovali mereni soucastky. Stredna hodnota 20.1, vyrobece garantuje
+odchylku 0.9. Testujet hypotezu s normalnim rozdelenim s prislusnymy parametry.
+
+Je i s modifikaci - lilierofs test s jinyma hranicnima hodnotama., pokus bysme neznali parametry.
+```{r}
+d1 <- c(19.32, 19.57, 19.08, 20.87, 19.9, 18.92, 20.98, 20.18,
+        20.67, 18.87, 21.69, 19.9, 19.16, 20.44, 21.68, 21.23,
+        19.44, 19.95, 20.59, 20.62, 21.05, 20, 18.96, 22.12, 19.39,
+        19.85, 20.39, 18.93, 20.06, 19.2)
+```
+Greaficka analyza - boxplot
+```{r}
+boxplot(d1, horizontal = T)
+```
+```{r}
+# kvantil, kvantil, grafy
+qqnorm(d1) # zhruba to lita na 1 ose.
+qqline(d1)
+```
+```{r}
+library(ggpubr)
+ggqqplot(d1) # tenhle best, interval spolehlivosti pro regresni primku. Dokad je to vevnitr, tak as OK.
+```
+Histogram empiricky a teoreticky hodnoty
+```{r}
+hist(d1, probability = T)
+lines(density(d1))
+ssx <- seq(min(d1) - 1, max(d1) - 1, 0.01)
+lines(ssx, dnorm(ssx, mean = mean(d1)), sd = sd(d1), col = 'red')
+```
+
+```{r}
+test <- ks.test(d1, 'pnorm', mean = 20.1, sd = 0.9)
+```
+
+Shoda, p value je velky.
+Vyrobece tvrdi, ze doba zivotnosti jeho vyrobku ma exponencialni rozdeleni se stredni hodnotou 2000 dni.
+Stredni honota = 1/lambda => lambda = 1/2000
+```{r}
+l <- 1 / 2000
+ziv <- c(4996, 976, 294, 7302, 2420, 1006, 7654, 2973, 320, 3169, 3994, 3989, 2689, 2215, 391, 4966, 1959, 9167, 5365, 2377)
+test <- ks.test(ziv, 'pexp', 1 / 2000)
+test
+```
+Zamytam H0. Muze to byt jinym parametrem lambda.
+
+Dvojvyberovy KS test.
+2 labaky testuji pritomnost protilatek. Davaj labaky stejny vystupy?
+```{r}
+a <- c(0.28, 0.31, 0.27, 0.33, 0.33, 0.29, 0.29, 0.3, 0.31, 0.31, 0.32, 0.31, 0.3, 0.31, 0.3)
+b <- c(0.24, 0.25, 0.28, 0.27, 0.2, 0.32, 0.13, 0.26, 0.38, 0.24, 0.36, 0.31, 0.3, 0.2, 0.26)
+
+ks2 <- ks.test(a, b); ks2
+```
+
+Zamitam H0, ze mej stejny rozdeleni. Nemaj.
+
+```{r}
+library(psych)
+data <- data.frame(a, b)
+multi.hist(data, dcol = c('green', 'blue'))
+```
+Aj podle obrazku to vypada jinak.
+
+Samostatne otestovat, ze to ma oboji normalni rozdeleni, parametry nezname -> pouze shappiro a lilienfors.
+```{r}
+# pro mensi rozsahy
+shapiro.test(a) # ano, sou normalne
+shapiro.test(b) # taky sou
+#
+# rozdil asi v rozptylech.
+
+# pro vetsi rozsahy dat.
+# lillie.test(a)
+```
+

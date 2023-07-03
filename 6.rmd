@@ -1,0 +1,175 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Resty z minula:
+
+Dvojvyberove neparove testy pro nezavisle vybery.
+Prv, jak testuju rovnost strednich hodnot, je potreba overit rovnost disperze, podle vysledku bolime postup dale.
+
+Neparovy test, rovnost disperzi
+
+Dva druhy plasticke hmoty sme vystavili svetlu po dobu 6 mesicu. Merili sme odolnost vuci svetlu po dobu 6 mesicu.
+Vysledkyy sou dane (odolnost vuci svetlu v dnech). Radi bysme se rozhodly pro prvni druh. Testujte hypotezu
+o rovnake odolnosti vuci svetlu.
+
+Nejdriv se musi testovat rovnost disperse. Pouzijem ration hypotezu.
+dx/dy = 1 se testuje.
+```{r}
+library(DescTools)
+library(EnvStats)
+prvy <- c(85, 87, 92, 80, 84, 86)
+druhy <- c(89, 89, 90, 84, 92)
+
+var.test(prvy, druhy) # pro 2 ds, porovnani disperze
+```
+p > 0.05, potvrzuji H0
+
+Ted se teprv da testovat rovnost strednich hodnot. Neparovy
+
+```{r}
+t.test(prvy, druhy, paired = F, var.equal = T)
+```
+0.17 > 0.5 nezamitam hypotezu o strednich hodnotach. Sou tam statisticky nevyznamne rozdely.
+
+Priklad, kdyz se disperze nerovnaji.
+
+Firma kupuje ochranne pracovne prostredky od 2 dodavatelu. Dlzky dodavek v dnech na hladine vyznamnosti alpha = 0.05.
+Testujte hypotezu, ze delky dodani sou stejne.
+```{r}
+aa <- c(10, 12, 15, 25, 18, 20, 15, 25, 30)
+bb <- c(15, 15, 18, 10, 16, 12, 15)
+
+var.test(aa, bb) # p 0.03 < 0.05 => nemaji stejne disperze
+t.test(aa, bb, paired = F, var.equal = F) # fischer ratio test
+```
+p value 0.09 > 0.05, je to ok, statisticky se vyznamne nelisijou
+
+jeste by to chtelo vybrat firmu s mensima rozpltylama. Bb je lepsi.
+```{r}
+var(aa); var(bb)
+```
+
+Nova latka - analyza rozptylu, ANOVA, vice vyberu, porovnani strednich hodnot.
+Nejdriv jednofaktorova. Dissperze musi byt stejna, vsechno normalni.
+
+Testujeme hypotezu, ze stredni hodnoty vice jak 2 trid se rovnaji.Test se upravi na test nulovosti tridicich faktoru.
+H0: alpha1 == alpha2 == ... == alphaI
+
+Podminka normalita trid a rovnost disperzi. Jinak se pouzije jiny test, napr. Kruskall-Wallison. Je dobre vizualizovat.
+Musijou se data faktorizovat.
+
+Testujte hypotezu, jetsli vzdelani (vseobecna, odborna, vysoka) ma vliv na vysku prijmu. Faktor vzdelani je
+statisticky nevyznamny, nema vliv na vysku prijmu.
+
+```{r}
+install.packages('ggpubr')
+library(readxl)
+library(RColorBrewer)
+library(ggplot2)
+library(ggpubr)
+
+data <- read_xlsx('dataE.xlsx')
+
+vzdelanie <- factor(data$vzdelanie)
+vzdelanie1 <- subset(data, data$vzdelanie == 1)
+vzdelanie2 <- subset(data, data$vzdelanie == 2)
+vzdelanie3 <- subset(data, data$vzdelanie == 3)
+```
+test normality a test rovnosti disperze, shappiro wilk
+```{r}
+shapiro.test(vzdelanie1$mprij)$p.value
+tapply(data$mprij, data$vzdelanie, shapiro.test)
+```
+Je to normalne rozdeleny vsechno.
+
+Na disperzi se pouziva Bartletuv test
+
+```{r}
+bartlett.test(data$mprij, vzdelanie)
+```
+OK, disperze v tride sou naopak.
+
+Dem nejdriv testovat, pak analyzovat
+```{r}
+anova <- aov(data$mprij~vzdelanie)
+summary(anova)
+```
+Zamitam H0, du zkontrolovat, co sedi a nesedi (postesty). Faktor vzdelani je statisticky vyznamny a ma vliv na prijem.
+Najcastejsi Tukkihy test. Scheffe test se taky muze pouzit vzdy.
+```{r}
+tpt <- TukeyHSD(anova)
+tpt
+```
+1. a 2. sou stejny, s tou treti to nesedi.
+
+```{r}
+plot(tpt)
+```
+Zaver, testem i grafycky  sou vyznamne rozdily mezi 3-1 a 3-2. tridy 1, 2 muzu povazovat za stejne.
+
+
+Grafy, ktery patri k analyze rozptylu. Vhodny pred vypoctama.
+```{r}
+library(vioplot)
+boxplot(data$mprij~vzdelanie, col = brewer.pal(3, "Blues"), ylab = "Prijem", main = "Prijem vzhladom na vzdelanie")
+vioplot(data$mprij~vzdelanie, col = brewer.pal(3, "Blues"), ylab = "Prijem", main = "Prijem vzhladom na vzdelanie")
+```
+```{r}
+prijem <- data$mprij
+tmp <- data.frame(vzdelanie, prijem)
+# ggline(tmp, x='vzdelanie', y='prijem', add = C('mean_se', "jitter", "violinplot"))
+```
+Dvojfaktorova ANOVA (vek, typ lecby)
+Dve hypotezy. Plus treti muze byt na interakce.
+
+Mereni se deli do podmnozin podle dvou faktoru. Radkovy faktor je statisticky nevyznamny a ze sloupcovy faktor
+je statisticky nevyznamny. Zatim bezinterakci.
+
+Normalni rozdeleni plus disperze se musi kontrovat. Tady se predpoklada, ze to plati.
+
+Meereni v labaku, F1 = 2 laboranti, F2 = 4 pristroje
+```{r}
+anova2 <- read_xlsx('anova2.xlsx')
+laborant <- factor(anova2$laborant)
+pristroj <- factor(anova2$pristroj)
+deg <- factor(anova2$deg)
+
+an2 <- aov(anova2$deg~laborant+pristroj) # + laborant * pristroj je na interakce
+summary(an2)
+```
+Laborant ma vliv na mereni. Pristroj taky ma vliv na mereni.
+Musijou se udelat post testy zas.
+```{r}
+tpt <- TukeyHSD(an2)
+summary(tpt)
+```
+```{r}
+boxplot(anova2$deg~anova2$laborant, col = brewer.pal(3, "Blues"))
+```
+
+```{r}
+boxplot(anova2$deg~anova2$pristroj, col = brewer.pal(3, "Blues"))
+```
+```{r}
+deg <- anova2$deg
+p1 <- data.frame(laborant, deg)
+p2 <- data.frame(pristroj, deg)
+
+```
+```{r}
+ggline(p1, x='laborant', y='deg', add = c('mean_ci', 'jitter', 'violin'))
+```
+```{r}
+ggline(p2, x='pristroj', y='deg', add = c('mean_ci', 'jitter', 'violin'))
+
+```
+```{r}
+interaction.plot(laborant, pristroj, deg, col = c(1, 4))
+```
+```{r}
+interaction.plot(pristroj, laborant, deg, col = c(1, 3))
+```
+
+

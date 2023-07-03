@@ -1,0 +1,170 @@
+---
+title: "Test"
+output: html_notebook
+---
+
+## 1.
+
+Nacteni dat
+```{r}
+library(readxl)
+data <- read_xlsx('p5.xlsx')
+# View(data)
+opo <- data$opotrebenie
+```
+Tabulky
+```{r}
+# absolutni poc, oba slopce
+apply(data, 2, table)
+# relativni poc, jen opotrebeni
+table(data$opotrebenie) / length(data$opotrebenie)
+```
+
+Charakteristiky
+
+Mean, median i modest maji podobnou hodnotu. Smerodatna odchylka je mensi vzhledem k max-min hodnote. Data nejsou
+"divoka". Data nejsou úplne symetrická, ale vychýlená do doprava (zaporna skewness).
+Zároveň jsou o něco více zploštělá (skewness). Teoreticky by se mohlo jedna o normalini distribuci.
+```{r}
+min(opo); max(opo)
+mean(opo)
+median(opo)
+
+library(modeest)
+mfv(opo)
+```
+```{r}
+var(opo)
+sqrt(var(opo))
+
+library(e1071)
+skewness(opo) # sikmost
+kurtosis(opo) # spocatost
+```
+
+Ploty
+
+Histogram vypada na normalni rozdeleni.
+```{r}
+library(ggplot2)
+library(vioplot)
+# library(MASS)
+# library(RColorBrewer)
+
+hist(opo)
+```
+Stehne tak i box plot vypada normalne. Hodnoty jsou lehce posunute doprava (shoduje se se skewness). Nejsou tu zadne vybocujici hodnoty.
+```{r}
+boxplot(opo, horizontal=T)
+```
+Pri vykresleni po miste mereni maji vsechny tri kategorie podobny tavr boxplotu, ale je mezi nimi videt rozdil. 2 a 3 vypadaji nejvice odlisne, maji jinde median, u 2 se hodnoty drzi vice stredu, u 3 jsou vice roztahle do sirky.
+```{r}
+boxplot(opo~data$miesto, col=c('blue', 'red', 'green'), horizontal=T)
+```
+U violinplotu se vizualne nejvice odlisuje 3.
+```{r}
+vioplot::vioplot(opo~data$miesto, main='Vio plot')
+```
+
+## 2.
+
+Test na normalitu
+
+Data jsou normalne rozdelena, p-hodnota je > 0.05.
+```{r}
+shapiro.test(opo)
+```
+
+Intervalovy odhad  - stredni hodnota
+```{r}
+t.test(opo, conf.level = 0.90)$conf.int
+t.test(opo, conf.level = 0.90, alternative="less")$conf.int  # pravostranny <-inf, k>
+```
+
+Intervalovy odhad - disperze
+```{r}
+library(EnvStats)
+varTest(opo, alternative = "two.sided", conf.level = 0.90)$conf.int
+varTest(opo, alternative = "less", conf.level = 0.90)$conf.int
+```
+
+## 3.
+Porovnani 2 verzi
+```{r}
+mu <- 80
+sd <- 10
+```
+Test na normalitu. P-hodnota je > 0.05, jedna se o normalni rozdeleni.
+```{r}
+shapiro.test(opo)
+```
+
+H0: mu_new == mu_old (mu_new < mu_old); H1: mu_new > mu_old.
+Pouzivama odchylku, sedi i na nova data. P-hodnota je vetsi jak 0.05, novy plast se opravdu zlepsil.
+```{r}
+# odchylka na tyto data sedi, pouzijeme ji
+varTest(opo, sigma.squared = 10*10)
+```
+```{r}
+# test, kdy sd nezname
+# t.test(opo, mu = mu, alternative = 'less')$p.value
+library(DescTools)
+ZTest(opo,mu=mu,sd_pop=10, alternative = 'greater')
+```
+
+## 4.
+
+Nahodnost mereni. Podle obou testu byla mereni opravdu nahodna.
+```{r}
+library(randtests)
+runs.test(opo, plot = F) # spojity
+turning.point.test(opo) # periodicita
+```
+
+Neparametricky test.
+
+I neparametricky test ma stejne vysledky.
+```{r}
+library(BSDA)
+SIGN.test(opo, md = mu, alternative = 'greater')
+```
+
+## 5.
+
+ANOVA
+
+```{r}
+miesto <- factor(data$miesto)
+miesto1 <- subset(data, data$miesto == 1)
+miesto2 <- subset(data, data$miesto == 2)
+miesto3 <- subset(data, data$miesto == 3)
+```
+
+1. normalita a disperze test
+
+Vse je normalni, homogenita disperze taky Ok.
+```{r}
+tapply(data$opotrebenie, data$miesto, shapiro.test)
+```
+```{r}
+bartlett.test(data$opotrebenie, miesto)
+```
+2. ANOVA
+
+Potvrzuji H0, mista nemaji statisticky vliv na opotrebeni.
+```{r}
+anova <- aov(data$opotrebenie~miesto)
+summary(anova)
+```
+I tuckey ukazuje, ze opravdu ty tri mista od sebe nelisi statisticky.
+```{r}
+tpt <- TukeyHSD(anova)
+tpt
+```
+3.grafy
+Confidence level se prekriva.
+
+Dalsi grafy jsou v uvodu (violin a boxplot).
+```{r}
+plot(tpt)
+```

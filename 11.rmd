@@ -1,0 +1,273 @@
+---
+title: "Regresna analyza"
+output: html_notebook
+---
+
+## Linearni regrese
+
+Pokud to prokazalo vysokou miru zavislosti, tak to popiseme regresni funkci.
+
+Dvojce velikost pevnyho disku a cena. Aspon jeden koeficient, interpretovat, prolozit vhodnou regresni funkci.
+
+```{r}
+library(car)
+library(carData)
+library(ggplot2)
+```
+
+Vsecky tri by se meli udelat a porovnat mezi sebou.
+```{r}
+x <- c(160, 250, 320, 500, 750, 900,1000, 1500, 2000)
+y <- c(789, 800, 851, 874, 1193,1200, 1335, 1704, 2073)
+cor(x, y)
+```
+
+```{r}
+plot(x, y, type = "b", xlab = "Kapacita", ylab = "Cena")
+```
+
+Graficka analyza.
+```{r}
+df <-data.frame(x, y)
+ggplot(df, aes(x=x, y=y)) + geom_point() + stat_smooth(method = lm)
+```
+```{r}
+lr1 <- lm(y~x) # modelovani primky
+lr1
+```
+```{r}
+plot(x, y, type = "b", xlab = "Kapacita", ylab = "Cena")
+abline(lr1, col="red")
+text(1500, 900, "6066 + 0.72x")
+```
+analyza rezidui (pozdeji), tabulka pro odhadnute parametry, testy hypotez
+rezidua musi byt nurmale rozdelene
+nulova hypoteza je, ze parametr je rovny nule,
+
+
+testuju, jetsli a, nebo b je potrebny, nebo to je 0 (neni to bazovy)
+podle Pr (p hodnota) oboji patri mezi bazove funkce
+
+disperze - cim menci, tim lepsi, de porovnavat jen mezi modely.
+
+r-square cim blizsi jedny, tak tim lepsi. 0.98 vzajemneho vstahu mezi x a y popisuje ta regrese.
+
+posledni  radek je o celym modelu, anova test:.
+H0: model je rovny konstante, neni potreba model.
+H1: je potreba modelovat a je to vhodny
+
+Je dobry si vyrolovat AIC, BIC - porovnani modelu. Nejlepsi je ten s nejmencim informacnim kriteriem.
+```{r}
+summary(lr1)
+```
+```{r}
+AIC(lr1)
+```
+Default je, ze konstanta patri mezi bazove funkce, ale mi ju obcas nechcem vyuzivat.
+```{r}
+lr2 <- lm(y~0+x)
+```
+```{r}
+plot(x, y, type = "b", xlab = "Kapacita", ylab = "Cena")
+abline(lr1, col="red")
+abline(lr2, col='blue')
+text(1500, 900, "6066 + 0.72x")
+```
+```{r}
+AIC(lr1, lr2) # lr1 je lepsi
+```
+Disperze se zvysila, vsecky ukazatele horsi. Porad ale lepsi jak konstanta.
+```{r}
+summary(lr2)
+```
+
+hodnoty odhadnute z primky - fitovane hodnoty, pro mereni a nove hodnoty (100, 200, 300)
+```{r}
+lr1$fitted.values
+```
+
+```{r}
+new_df <- data.frame(x=c(100, 200, 300))
+predict(lr1, new)
+```
+
+V deseti vzdalenostech se merila velikost priehybu desky u zatizeni.
+```{r}
+xx <- 1:10
+yy <- c(2.1299, 2.1532, 2.1611, 2.151, 2.1282, 2.0807, 2.0266, 1.9594,
+1.8759, 1.7723)
+```
+```{r}
+plot(xx, yy, type = 'b', xlab = 'Vzdalenost', ylab = "Prohyb")
+```
+```{r}
+lr3 <- lm(yy~poly(xx, 2))
+lr3
+```
+
+```{r}
+plot(xx, yy, type = 'b', xlab = 'Vzdalenost', ylab = "Prohyb")
+lines(xx, fitted(lr3)[xx])
+```
+```{r}
+summary(lr3)
+```
+
+## Transformace na lin regresi
+linearni regrese. nektery funkce se daj ale linearizovat
+kdyz log, tak to musi byt nazaporne.
+
+
+Barometricky tlak zavisi exponencialne od nadmorske vysky v metrech.
+tlak zavisi od nadmorske vysky p = a*e^(b*h)
+```{r}
+h <- c(0,270,840,1452,2116,3203)
+p <- c(100000,96974,90263, 83553,76842,66842)
+plot(h, p, col='blue', type = 'b', xlab = 'nadm. vyska', ylab = 'bar. tlak')
+```
+```{r}
+lr4 <- lm(log(p)~h)
+# h se musi zpetne transformovat
+```
+```{r}
+a <- exp(lr4$coefficients[1])
+b <- lr4$coefficients[2]
+a; b
+```
+```{r}
+plot(h, p, col='blue', type = 'b', xlab = 'nadm. vyska', ylab = 'bar. tlak')
+lines(h, a*exp(b*h), col = 'red')
+```
+
+## Vicenasobna regrese
+```{r}
+library(datarium)
+head(marketing)
+```
+
+```{r}
+pairs(marketing)
+```
+```{r}
+par(mfrow=c(2, 2))
+plot(marketing$sales~.,marketing)
+```
+```{r}
+library(corrplot)
+k <- cor(marketing)
+corrplot.mixed(k)
+```
+
+Nejdriv uvazuju, ze vsechny promenne vstupuji do regrese.
+
+To newspaper mam minus - jakoby to uberalo.
+```{r}
+lr5 <- lm(sales~., marketing)
+lr5
+```
+0.89 je fajn, ale newspaper nemusime uvazovat.
+```{r}
+summary(lr5)
+```
+Podobny koeficienty.
+```{r}
+lr6 <- lm(sales~youtube+facebook, marketing)
+summary(lr6)
+```
+Podle AIC si vybereu model se dvema nezavislimy promennymy.
+```{r}
+# menci je lepsi, lr6 ne o neco lepsi
+AIC(lr5, lr6)$AIC
+```
+Vse v tomto se da udelat jednim krokem.
+```{r}
+lm.fit <- step(lr5)
+```
+```{r}
+summary(lm.fit) # summar pro nejlepsi model
+```
+```{r}
+plot(lm.fit)
+```
+```{r}
+library(leaps)
+regfit.full <- regsubsets(sales~., marketing, nbest=3) # pro kazkou podmnozinu n nejlepsich modelu
+summary(regfit.full)
+summary(regfit.full)$bic # nejmenci bic je ctvry v poradi
+```
+
+## Residua
+Musijou by normalne rozdeleny a nekorelovany, stredni hodnota rovna nule, rozptyl konstantni.
+Upravene normovane a statndardizovane, p...?, studentizovany
+
+Prvni, zda sou rezidua nahodne - oblak dat, bez vzoru to ma byt.
+Druhy o normalite dat. Ty data, co to kazi oznacele cislem.
+Homoskedacitu - malo by to byt oblak dat, konstantni disperze
+Zda je to vlivny bod - zas to kazi ty stejne.
+```{r}
+plot(lr5)
+```
+To stejny, residua vzhledem na fitovane hodnoty. Trosku vzor tam je. Overit, zda sou nahodne.
+```{r}
+residualPlot(lr5)
+```
+Pro kazdou cast zvlast.
+```{r}
+residualPlots(lr5)
+```
+
+4 testy: normalita, nehodnot, nulovost stredni hodnoty a nekorelovanost
+```{r}
+rezi <- lr5$residuals
+shapiro.test(rezi) # normalita
+# neni to normalne rozdeleny - povyhazovat outliers
+```
+
+```{r}
+library(randtests)
+turning.point.test(rezi)
+# aspon, ze sou nahodne
+```
+
+test na korelovanost
+```{r}
+durbinWatsonTest(lr5) # sou nekorelovane.
+```
+
+Nejsou normalne rozdelene, vyhodime outliers, model samotny vypada dobre.
+
+Vlivne body regrese.
+
+```{r}
+x <- c(160, 250, 320, 500, 750, 900, 1000, 1500, 2000)
+y <- c(789, 800, 851, 874, 1193,1200, 1335, 1704, 2073)
+
+lr1 <- lm(y~x)
+summary(lr1)
+```
+```{r}
+library(olsrr)
+ols_plot_cooksd_bar(lr1)
+```
+```{r}
+ols_plot_cooksd_chart(lr1) # ani jeden vlivny bod
+```
+```{r}
+ols_plot_dfbetas(lr1)
+# prvni a ctvrka hodnota, prepocita se regrese, zjisti se, ktera je lepsi
+```
+```{r}
+ols_plot_resid_stand(lr1) # ctvrty bod na hranici
+```
+```{r}
+ols_plot_resid_stud(lr1)
+```
+```{r}
+ols_plot_resid_stud_fit(lr1)
+```
+ zaver - vyhodim ctvrty mereni, prepocita se regrese.
+ hlavne koeficient determinace plus informacne kriterium,
+
+vybrat podle lepsih ukazovatelu - info kriterium
+
+s vyhazovanim opatrne, pokud malo mereni.

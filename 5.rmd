@@ -1,0 +1,126 @@
+---
+title: "Exercise 5"
+output: html_notebook
+---
+Test hypotez pro parametry normalniho rozdeleni.
+
+PR: vyrobce uvadi, ze po 2500 prum je treba vymenit toner se smerodanou odchylkou 30. My sme udelali vlastni mereni.
+Chceme to pro alpha = 0.05 otestujte hypotezu, ze tvrdeni vyrobce je pravdive. Predpoklad, ze data jsou normalne rozdelene.
+H0: mi = 2500, H1: mi != 2500.
+
+Nezamitam H0, tvrzeni vyrobcu o pocte zkopirovanych stran do vymeny toneru je pravdive.
+
+Tento test se pouziva malo, neni obvykli, ze znam sigma
+```{r}
+x <- c(2445, 2450, 2453, 2462, 2463, 2463, 2466, 2471, 2474, 2475, 2475,
+       2484, 2485, 2486, 2487, 2490, 2491, 2493, 2499, 2501, 2501, 2503,
+       2504, 2505, 2505, 2506, 2506, 2507, 2509, 2511, 2511, 2513, 2514,
+       2515, 2518, 2523, 2523, 2524, 2525, 2527, 2529, 2530, 2530, 2533,
+       2535, 2536, 2537, 2539, 2560, 2571)
+
+alpha <- 0.05
+mi0 <- 2500
+mean <- mean(x)
+sigma <- 30
+n <- length(x)
+(T <- (mean - mi0) * sqrt(n) / sigma)
+
+if (abs(T) >= qnorm(0.975, 0, 1)) print("Zamitam H0") else print('Nezamitam H0')
+```
+Knihovni funkce pro to samy
+```{r}
+library(DescTools)
+ZTest(x, mu = 2500, sd_pop = 30)
+ZTest(x, mu = 2500, sd_pop = 30)$p.value
+# pvalue je vesi nez 0.05, nezamitam H0
+```
+Jeste plot, kriticka oblast testu.
+```{r}
+plot(function(x) dnorm(x, mean = 0, sd = 1), from = -4, to = 4)
+```
+Test pro stredni hodnotu, pokud sigma nepoznam. Porovnavam s kvantilem rozdeleni studentovyho rozdeleni. Dava se tam pocet mereni -1 (stupne volnosti).
+Ta stejna uloha, jak nahore.
+```{r}
+t.test(x, mu = 2500)
+t.test(x, mu = 2500)$p.value
+# p > 0.05, nezaamitam H0, ikdyz disperzi neznam. Vyrobce ma pravdu
+```
+Dalsi priklady na vetsi, mensi s jinou hladinou vyznamnosti.
+
+Firma prodava 100% jabkovou stavu po 0.5l. Po oprave linky byli namerene hodnoty objemu v ml. Na hladine vyznamnosti
+a = 0.1 otestujte, ze je linka dobre nastavena. Hypoteza na rovnost.
+```{r}
+a <- 0.15
+js <- c(495.2, 496.8, 502.1, 498.5, 501, 503, 500.7,
+        501.5, 501.8, 499.1, 500.9, 502.2, 501.7, 500.4,
+        500.2, 501.1, 499.9, 500.2, 501.1, 500.8, 499.3)
+t.test(js, mu = 500, conf.level = 1 - a)
+
+# podle p hodnoty nezamitam
+```
+Priklady na greather a less
+Firma s baterkama do NB tvrdi, ze vyrobi jenu do 13 minut. Overte s 20 remerenima.
+H0 mi = 13 (<= 13), H1 mi > 13
+```{r}
+bat <- c(12, 19, 16, 11, 7, 12, 14, 18, 15, 19, 17, 19, 13, 9, 11, 20, 12, 19, 8, 13)
+t.test(bat, mu = 13, alternative = 'g')
+# nezamitam H0, vyrobce to dava do 13 min.
+# p: 0.09  > 0.05
+```
+Firma nakupuje baterky do el hracek, Vyrobce garantuje, ze baterky vydrzi min 19 hodin.
+Tvrdi H0: mi = 19 (mi > 19), H1: mi <= 19
+```{r}
+bat1 <- c(20.2, 19.6, 18.6, 19.4, 17, 18.5, 18, 18.4, 19, 18, 17.9, 18.1)
+t.test(bat1, mu = 19, alternative = 'l')
+t.test(bat1, mu = 19, alternative = 'l')$p.value
+# vyrobce nekeca.
+# p 0.0539 > 0.05
+```
+
+Pizza data. Na letaku, ze rozvoz do 30 min. Alpha 0.05
+H0: mi=30 (mi <=30), H1 mi>30
+```{r}
+pizza <- c(27, 28, 35, 36, 29, 24, 30, 26, 28, 32, 24, 32, 31, 29, 28, 29, 35, 34, 30, 31)
+t.test(pizza, mu = 30, alternative = 'g')
+t.test(pizza, mu = 30, alternative = 'g')$p.value
+# p 0.5512 > 0.05
+# nezamitam H0
+```
+Testy pro disperzi. Ch-kvadrat.
+Vyrobce kopirky tvrdil, ze smerodajna odchylka je 30 stran. Na a = 0.05 testujte hypotezu, ze tvrdeni o disperzi je pravdive.
+
+H0: sigma2 = 30^2, H1: sigma2 != 30^2
+```{r}
+sigma <- 30 * 30
+x <- c(2445, 2450, 2453, 2462, 2463, 2463, 2466, 2471, 2474, 2475, 2475,
+       2484, 2485, 2486, 2487, 2490, 2491, 2493, 2499, 2501, 2501, 2503,
+       2504, 2505, 2505, 2506, 2506, 2507, 2509, 2511, 2511, 2513, 2514,
+       2515, 2518, 2523, 2523, 2524, 2525, 2527, 2529, 2530, 2530, 2533,
+       2535, 2536, 2537, 2539, 2560, 2571)
+
+var(x)
+# varTest(x, sigma.squared = 30 * 30)
+# p 0.56 > 0.05
+# nezamitam H0, ta plati
+```
+Dvojvyberovy parovy testy. Jen stredni hodnoty se budou porovnavat.
+Parove testy -> zavisle vybery.
+
+Udelam z toho jednovyberovy tim, ze to odectu. Testuju na mi == 0, muzu testovat i na mi == delta
+
+Cas, za kolik zaci udelaj ulohy. Pred basic, po je mereno po nejakych cvicenich.  Otazka je, jetsli sou schopni to resit efektivneji.
+
+H0: pred - po >=0; H1: pred - po < 0
+```{r}
+pred <- c(87, 61, 98, 90, 93, 74, 83, 72, 81, 75, 83)
+po <- c(50, 45, 79, 90, 88, 65, 52, 79, 84, 61, 52)
+
+boxplot(pred, po)
+
+df <- pred - po
+t.test(df, mu = 0, alternative = 'l')
+t.test(pred, po, mu = 0, alternative = 'l', paired = T)
+
+# p 0.9945 > 0.05
+# je to OK, fakt se zlepsili, je tam statistickej rozdil
+```

@@ -1,0 +1,160 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Korelacni analyza
+
+Analyza 2D (multiD) stat soubor, Zajima nas, jestli se slozky ovlivnuji (koreluji).
+
+Data byli namereny po dvojcich.
+
+Kovariance - nejaka lin zavislost. Toto je 0(zavisle), !=0(nezavisle).
+
+Cena pevnych disku (y - nezavisla) a kapacita (x - nezavisla), zva a neza zatim nemusim resit.
+Spocitejte vektor strednich hodnoty, kovarinaci, testujte 2D normalitu, vizualizujte.
+
+```{r}
+library(ggplot2)
+x <- c(160, 250, 320, 500, 750, 900, 1000, 1500, 2000)
+y <- c(789, 800, 851, 874, 1193, 1200, 1335, 1704, 2073)
+
+# 100 pro bude lin zavislost
+plot(x, y, type = 'b')
+
+```
+
+```{r}
+# mean
+c(mean(x), mean(y))
+# basic kovariance (Pearsson), interpretovani kovariance tady nejde
+cov(x, y);
+cov(x, y, method = "spearman")
+cov(x, y, method = "kendall")
+```
+
+normovani -> korelacni koeficient, uz je to interpretovatelny
+jen lin zavislost
+0.99 - silna lin zavislost, prolozi se to lin primkou
+
+X, Y normalne rozdelene a korelacni koef => muzu rict, ze sou fakt zavisle.
+
+Dobry je spociatat vsechny 3
+```{r}
+cor(x, y) # citlivy na vybocujici hodnoty
+cor(x, y, method = 'spearman')
+cor(x, y, method = 'kendall') # ruzny modifikace, neberou se poradi, ale pary, ktery sou souhlasny, nesouhlasny
+```
+
+Test pro korelacni koeficient
+H0: ro  = 0, H1: ro != 0
+
+Test jen po normalne rozdelene data, multinormalita se musi checknout.
+Je to normalni, p hodnota > 0.05
+```{r}
+library(mvnormtest)
+data <- rbind(x, y)
+mshapiro.test(data)
+```
+```{r}
+library(ggpubr)
+data1 <- data.frame(x, y)
+
+# data, regresni primka, IS pro regresni primku, hodnotu kor coeficienta pearsonova, p hodnota pro test nulovosti
+# koeficientu, p hodnota < 0.05, zamitam H0 (korelacni je nulovy), neni ve skutecnosti nulovy.
+ggscatter(data1, x = 'x', y = 'y', add = "reg.line", conf.int = T, cor.coef = T) # otestoval se i korelacni koeficient na 0, zamitly bysme hypotezu o nulovosti
+```
+
+Testy
+U vsech vidime, ze to neni 0, souvisi to spolu.
+```{r}
+cor.test(x, y)
+cor.test(x, y, method = 'kendall')
+```
+### Simlulace
+simulace nezavislych dat, lin zavislych a slouzitejsich dat + korelacni koeficienty.
+
+Lin nezavisle
+```{r}
+xx <- rnorm(100, 2, 4)
+yy <- rnorm(100, 1, 1)
+
+plot(xx, yy)
+cor(xx, yy)
+
+df <- data.frame(xx, yy)
+ggscatter(df, x = 'xx', y = 'yy', add = "reg.line", conf.int = T, cor.coef = T)
+```
+Lin zavisle
+```{r}
+xxx <- 1:100 + xx
+yyy <- 2 + 3 * xxx + yy
+df <- data.frame(xxx, yyy)
+ggscatter(df, x = 'xxx', y = 'yyy', add = "reg.line", conf.int = T, cor.coef = T)
+```
+
+Slozitejsi zavislost. Evidentne sinusoida.
+```{r}
+x3 <- 1:100
+y3 <- sin(x3) + rnorm(100, 0, 0.5)
+plot(x3, y3, type = 'b')
+cor(x3, y3) # skoro 0,
+```
+
+3D data, korelacna analyza pro vicerozmerny vektor. Zavislosti mezi vicero slozkami.
+Sou tam uz korelacni matice.
+
+```{r}
+library(carData)
+library(car)
+head(mtcars) # bez kategorialnich da
+
+car1 <- mtcars[, c(1:7)]
+cor(car1)
+library(corrplot)
+corrplot.mixed(cor(car1))
+```
+I testy nulovosti corr koef se naji udelat naraz
+```{r}
+library(Hmisc)
+rcorr(as.matrix(car1))
+```
+Podobny vysledek, jina funkce.
+```{r}
+library(correlation)
+correlation(car1)
+```
+Dalsi grafy na odhaleni souvislosti.
+```{r}
+library(readxl)
+data <- read_excel('dataE.xlsx')
+str(data)
+
+# prijem a strava asi koreluji
+pairs(data[, c('vek', 'mprij', 'mstrava')])
+```
+
+```{r}
+cor(data$mprij, data$mstrava) # celkem dost
+cor(data$vek, data$mprij) # nizky
+```
+```{r}
+library(GGally)
+ggpairs(data[, c('vek', 'mprij', 'mstrava')]) # hezci graf, p hodtoty, hustoty pro promennou.
+```
+```{r}
+# pro podmnoziny
+# podel pohlavi
+ggpairs(data, columns = 2:4, aes(colour=pohlavie)) # hezci graf, p hodtoty, hustoty pro promennou.
+```
+Zaklad regresni analyzy. Pokud vysoka mira zavislosti linearni, tak regresni analyza. Snazim se zavislost popsat funkci.
+Data o diskach z 1. prikladu.
+
+```{r}
+lr1 <- lm(y ~ x) # je tam preddefinovana konstanta
+lr1 # lin zavislost popsana primkou, y=609.66 + 0.72x
+summary(lr1)
+
+# mutiple R-squared 98 proc dat tim dokazu popsat.
+# posledni radek H0: netreba modelovat, y je konstanta H1: ma smysl modelovat primkou.
+```

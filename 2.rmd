@@ -1,0 +1,206 @@
+---
+title: "Exercise2"
+output: html_notebook
+---
+
+# Rozdeleni pravdepodobnosti
+```{r}
+library(latexpdf)
+library(latex2exp)
+```
+### Prikazy pro rozdeleni
+na zacatku pismeno d, kdyz pravdepodobnosti P(x=i) = pi
+na zacatku pismeno p, kdyz pravdepodobnost P(X<=i)
+q je pro qvantil
+r pro random numbers
+
+## Binomicke rozdeleni (diskretni), Bi(n, p)
+n krat opakuju pokus,
+n - pocet pokusu,
+p - pravdepodobnost vyskytu jevu v 1 pokusu
+
+### PR
+Ucinnost antibiotika je 80 %. Podavame ho 10 pac na oddeleni. Zratajte pravdepodobnosti:
+
+1. vsichni se vyleci P(X=10)
+```{r}
+n <- 10
+dbinom(10, 10, 0.8)
+```
+
+
+2. prave 7 se vyleci P(X=7)
+```{r}
+dbinom(7, 10, 0.8)
+```
+4. max 8 se vyleci (P<=8)
+```{r}
+pbinom(8, 10, 0.8)
+```
+5. aspon 5 se vyleci (P>=5)
+stejny jako 1 - P(<=4)
+```{r}
+1 - pbinom(4, 10, 0.8)
+pbinom(4, 10, 0.8, lower.tail = F) # pozor na definici
+```
+
+tabulka rozdeleni pravdepodobnosti
+```{r}
+xb <- 0:10
+hustotab <- dbinom(xb, 10, 0.8)
+(tabulka <- data.frame(hodnota = xb, pravd = hustotab))
+sum(hustotab)
+```
+graf rozdeleni pravdepodobnosti
+```{r}
+barplot(tabulka$pravd, main = "Binomicke rozdeleni", xlab = "hodnota", ylab = "pravdepodobnost", col = 'red', names.arg = tabulka$hodnota)
+```
+## Hypergeometricke rozdeleni (diskretni), Hg(m, n, k)
+celkem n objektu s vlatnosti A je tam m prvku, z nich vyberu celkem N
+
+da se aproximovat binomickym
+
+### PR
+Student se nauci na zkousku 12 z 20. Test obsahuje (nahodny vyber) 5 otazek.
+m = 12 pocet se sledovanou vlastnosti
+n = 8 pocet bez lastnosti ()
+k = 5 kolik vyberu celkem objektu
+
+1. student udela zkousku - zodpovi aspon 3
+P(X>=3), co je P(X<=2)
+```{r}
+phyper(2, 12, 8, 5, lower.tail = F)
+```
+2. student dostane A (vsech 5 dobre)
+```{r}
+dhyper(5, 12, 8, 5)
+
+```
+student neudela zkousku (max 2 otazky), 0, 1, 2
+
+```{r}
+phyper(2, 12, 8, 5)
+```
+Tabulka a graf rozdeleni pravdepodobnost
+
+```{r}
+xh <- 0:5
+hustotah <- dhyper(xh, 12, 8, 5)
+(tabulka <- data.frame(hodnota = xh, pravd = hustotah))
+sum(hustotah)
+```
+
+## Poissonovo rozdeleni
+ma jen jeden parametr lam - stredni hodnota, ocekavana
+teorie hramad obsluhy
+ridke jevy
+
+### PR
+na samoobsluznou linku 20 lidi za hodinu.
+
+vypocitejte pravd, ze za 15 min prijde 1 clovek. (20/60) * 15
+
+```{r}
+dpois(1, 5)
+```
+
+za 5 min nikdo neprijde (20/60) * 5
+```{r}
+dpois(0, 5 / 3)
+```
+za 10 min aspon 10 lidi (20/60) * 10
+
+```{r}
+ppois(9, 10 / 3, lower.tail = F)
+1 - ppois(9, 10 / 3)
+```
+
+Tabulka a graf rozd pravd
+lam = 20  a prvni 20 hodnot
+```{r}
+xp <- 0:20
+hustotap <- dpois(xp, 20)
+(tabulka <- data.frame(hodnota = xp, pravd = hustotap))
+sum(hustotap)
+```
+
+```{r}
+barplot(tabulka$pravd, main = "Poissonovo rozdeleni", xlab = "hodnota", ylab = "pravdepodobnost", col = 'red', names.arg = tabulka$hodnota)
+```
+
+
+
+### Empiricka distribucni funkce pro 10 000 cisel
+
+```{r}
+data <- rpois(100, 200)
+plot(ecdf(data))
+```
+
+## Normalni Gaussovo (spojite) rozdeleni No(stredni, smer odchylka)
+pomoci hustoty pravdepodobnosti a smer odchylky
+
+### PR
+Zivotnost baterek do mobilu se ridi norm rozdelenim se stredni hodnotou 8 roku a smer odchylkou 2 roky
+
+kolik procent baterek je treba vymenit driv jak za 7 rokou.
+```{r}
+pnorm(7.5, mean = 8, sd = 2)
+```
+
+kolik procent baterek vydrzi rozpeti 7 - 9 roku
+```{r}
+pnorm(9, mean = 8, sd = 2) - pnorm(7, mean = 8, sd = 2)
+```
+
+kolik vydrzi vic jak 10 roku
+```{r}
+pnorm(10, mean = 8, sd = 2, lower.tail = F)
+1 - pnorm(10, mean = 8, sd = 2)
+```
+
+za jakou dobu zivotnosti se da zarucit na 90 procent
+dela se to jako 0.1 kvantil, nebo 0.9 kavntil s false tail
+```{r}
+qnorm(0.1, mean = 8, sd = 2)
+qnorm(0.9, mean = 8, sd = 2, lower.tail = F)
+```
+
+Histogram a hustota normalneho N(0, 1), je to i normovany
+
+overeni, jestli sou ty data normalni
+```{r}
+xx <- rnorm(500, 0, 1)
+xxx <- seq(-3.5, 3.5, 0.01)
+hist(xx, freq = F)
+lines(xxx, dnorm(xxx, 0, 1), col="red")
+```
+
+
+## Exponencialni rozdeleni
+analogie k poissonovu
+zivotnost, spolehlivost
+prevracena lambda
+
+### PR
+Delka zivotnosti PC je 2 roky
+
+jaka je pravd, ze PC bude mit zivotnost aspon 1 rok
+```{r}
+pexp(1, rate = 1/2, lower.tail = F)
+```
+max 5 roku
+```{r}
+pexp(5, rate = 1/2)
+```
+S jakou prvad byste se zaruculi s p=0.05
+tak dlouho vydrzi jen 5 procent
+```{r}
+qexp(0.05, rate = 1/2, lower.tail = F)
+```
+Kresleni hustoty
+```{r}
+x <- 0:5
+plot(function (x) dexp(x, rate = 1))
+```
+DU v ais zadani

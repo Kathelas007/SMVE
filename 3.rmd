@@ -1,0 +1,176 @@
+---
+title: "Prvotni stat analyza"
+output: html_notebook
+---
+
+Knihovny a data
+```{r}
+library(psych)
+library(Hmisc)
+library(FSA)
+library(pastecs)
+library(moments)
+
+data <- readxl::read_xlsx('dataE.xlsx')
+# View(data)
+names(data)
+dim(data)
+str(data)
+```
+Zpracovani sloupce avg mes prijem
+```{r}
+plat <- data$mprij
+plat
+```
+Min, MAX, stredni hodnota (aritmeticky prumer), prostedni (median), nejpocetnejsi (modus), harmonicky prumer, kvantily (0.25 kvantil, 0.5 kavntil (median), 0.75 je horni, nebo 3. kvantil). Str hod citlivy na vybocujici hodnoty, proto i median a modus
+```{r}
+min(plat)
+max(plat)
+mean(plat)
+median(plat)
+# tabulka pocetnosti
+table(plat)
+# tabulka rel pocetnosti
+prop.table(plat)
+# kumulaticni pocetnost
+cumsum(table(plat))
+cumsum(prop.table(plat))
+```
+Zpracovani dat tabulky
+```{r}
+# usporadani podle velikosti
+sort(plat)
+sort(plat)[10]
+
+sum(plat == 1200)
+sum(plat > 10000)
+sum(data$vek < 40)
+
+```
+G mean, nema smysl
+```{r}
+geometric.mean(plat)
+harmonic.mean(plat)
+quantile(plat, 0.25)
+quantile(plat, 0.5)
+quantile(plat, 0.75)
+```
+Charakteristiky
+```{r}
+# odhad disperze
+
+# smerodatna odchylka
+
+# variacni rozptyly
+max(plat) - min(plat)
+range(plat)
+diff(range(plat))
+
+# kvartilove rozpeti
+IQR(plat)
+
+# outliers
+# (1Q - 1.5 IQR, 3Q + 1.5IQR)
+
+# sikmost, spicatost
+
+```
+Norm roz ma sikmost 0, spicatost 3
+a3> 0, je vic doleva
+a4 < 3 spicaty, a4> 3 plochy
+```{r}
+# sikmost
+skew(plat) # psych, spis nee
+skewness(plat) # toto ANO
+
+# spicatost
+kurtosi(plat) # ne
+kurtosis(plat) # totok pouzivat, ANO
+
+hist(plat)
+```
+Somulace rozdeleni, mi = 0, sigma = 1, 0.01, 20. Neni to uplne vypovidajici, nespolehat se.
+```{r}
+tmp <- rnorm(1000, 0, 1)
+skewness(tmp)
+kurtosis(tmp)
+
+tmp <- rnorm(1000, 0, 0.01)
+skewness(tmp)
+kurtosis(tmp)
+
+tmp <- rnorm(1000, 0, 20)
+skewness(tmp)
+kurtosis(tmp)
+```
+CHI 2 rozdeleni sikmi zprava, nesimetricky
+```{r}
+tmp <- rchisq(10000, 5)
+skewness(tmp)
+hist(tmp)
+```
+Sumarne statistiky
+summary(plat)
+describe(plat)
+stat.desc(plat)
+# summarize(plat)
+```
+Stat charakteristiky na podmnozinach
+```{r}
+tapply(plat, data$pohlavie, mean)
+tapply(plat, data$vzdelanie, sum)
+```
+Ploty
+```{r}
+library(ggplot2)
+library(vioplot)
+library(MASS)
+library(RColorBrewer)
+
+# histogramy - tridni pocetnosti
+histogram(plat)
+hist(plat, breaks = 'sturges', col = 'lightblue', main = 'Histogram', ylab = 'pocetnost', freq = F) # relativni poc
+lines(density(plat), col = 'red')
+
+```
+```{r}
+muzi <- subset(plat, data$pohlavie == 'm')
+zeny <- subset(plat, data$pohlavie == 'z')
+
+par(mfrow = c(1, 2))
+hist(muzi, breaks = 'sturges', col = 'lightblue', main = 'Histogram Muzi', ylab = 'pocetnost', freq = F, ylim = c(0, 0.0025)) # relativni poc
+lines(density(muzi), col = 'red')
+
+hist(zeny, breaks = 'sturges', col = 'lightblue', main = 'Histogram Zeny', ylab = 'pocetnost', freq = F, ylim = c(0, 0.0025)) # relativni poc
+lines(density(zeny), col = 'red')
+```
+Box ploty
+```{r}
+par(mfrow = c(1, 1))
+boxplot(plat, col='lightblue', ylab = 'prijem', main='Box plot')
+```
+```{r}
+boxplot(plat~data$pohlavie, col=c('blue', 'red'), ylab = 'prijem', main='Box plot')
+boxplot(plat~data$vzdelanie, col=c('blue', 'red', 'green'), ylab = 'prijem', main='Box plot')
+
+```
+```{r}
+boxplot(plat~data$pohlavie + data$vzdelanie, col=c('blue', 'red'), ylab = 'prijem', main='Box plot')
+boxplot(plat~data$vzdelanie + data$pohlavie, col=c('blue', 'red', 'green'), ylab = 'prijem', main='Box plot')
+
+```
+Violin ploty
+```{r}
+vioplot::vioplot(plat~data$vzdelanie + data$pohlavie, main='Vio plot')
+boxplot(plat~data$vzdelanie + data$pohlavie, col=c('blue', 'red', 'green'), ylab = 'prijem', main='Vio plot')
+```
+```{r}
+par(mfrow = c(1, 2))
+boxplot(plat, col='lightblue', ylab = 'prijem', main='Box plot')
+vioplot::vioplot(plat, main='Vio plot')
+```
+diamonds jen par hodnot, prvotni stat analyzu
+cena vzhledem na ostatni faktory (color, quality, karat)
+help - diamonds
+
+
